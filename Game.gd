@@ -18,23 +18,15 @@ func _input(event):
 		if event.scancode == KEY_W or event.scancode == KEY_UP:
 			print("UP")
 			shift_board(UP)
-			
-			add_random_tile()
 		if event.scancode == KEY_D or event.scancode == KEY_RIGHT:
 			print("RIGHT")
 			shift_board(RIGHT)
-			
-			add_random_tile()
 		if event.scancode == KEY_S or event.scancode == KEY_DOWN:
 			print("DOWN")
 			shift_board(DOWN)
-			
-			add_random_tile()
 		if event.scancode == KEY_A or event.scancode == KEY_LEFT:
 			print("LEFT")
 			shift_board(LEFT)
-			
-			add_random_tile()
 
 
 func _ready() -> void:
@@ -80,35 +72,39 @@ func set_up_board():
 
 
 func shift_board(dir: int) -> void:
+	var m1 = false
 	match dir:
 		UP:
 			for y in range(1, 4):
 				for x in range(4):
-					var m1 = shift(Vector2(x,y), UP)
+					m1 = shift(Vector2(x,y), UP)
 					var m2 = shift(Vector2(x,y) + DIR_MATRIX[UP], UP) if m1 == true and y > 1 else false
-					var m3 = shift(Vector2(x,y) + DIR_MATRIX[UP] * 2, UP) if m2 == true and y > 2 else false
+					shift(Vector2(x,y) + DIR_MATRIX[UP] * 2, UP) if m2 == true and y > 2 else false
 		RIGHT:
 			for x in range(2,-1, -1):
 				for y in range(4):
-					var m1 = shift(Vector2(x,y), RIGHT)
+					m1 = shift(Vector2(x,y), RIGHT)
 					var m2 = shift(Vector2(x,y) + DIR_MATRIX[RIGHT], RIGHT) if m1 == true and x < 2 else false
-					var m3 = shift(Vector2(x,y) + DIR_MATRIX[RIGHT] * 2, RIGHT) if m2 == true and x < 1 else false
+					shift(Vector2(x,y) + DIR_MATRIX[RIGHT] * 2, RIGHT) if m2 == true and x < 1 else false
 		DOWN:
 			for y in range(2,-1, -1):
 				for x in range(4):
-					var m1 = shift(Vector2(x,y), DOWN)
+					m1 = shift(Vector2(x,y), DOWN)
 					var m2 = shift(Vector2(x,y) + DIR_MATRIX[DOWN], DOWN) if m1 == true and y < 2 else false
-					var m3 = shift(Vector2(x,y) + DIR_MATRIX[DOWN] * 2, DOWN) if m2 == true and y < 1 else false
+					shift(Vector2(x,y) + DIR_MATRIX[DOWN] * 2, DOWN) if m2 == true and y < 1 else false
 		LEFT:
 			for x in range(1,4):
 				for y in range(4):
-					var m1 = shift(Vector2(x,y), LEFT)
+					m1 = shift(Vector2(x,y), LEFT)
 					var m2 = shift(Vector2(x,y) + DIR_MATRIX[LEFT], LEFT) if m1 == true and x > 1 else false
-					var m3 = shift(Vector2(x,y) + DIR_MATRIX[LEFT] * 2, LEFT) if m2 == true and x > 2 else false
+					shift(Vector2(x,y) + DIR_MATRIX[LEFT] * 2, LEFT) if m2 == true and x > 2 else false
 	
 	for x in range(4):
 		for y in range(4):
 			numbers[Vector2(x,y)].has_combined = false
+	
+	if m1:
+		add_random_tile()
 
 
 func shift(pos: Vector2, dir: int) -> bool:
