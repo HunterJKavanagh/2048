@@ -1,8 +1,5 @@
 extends Node
 
-var numbers: Dictionary = {}
-var colors: Dictionary = {}
-
 enum {UP, RIGHT, DOWN, LEFT}
 
 const DIR_MATRIX: Dictionary = {
@@ -12,27 +9,138 @@ const DIR_MATRIX: Dictionary = {
 	LEFT: Vector2(-1,0)
 }
 
+var game2048: Game2048
+
+var numbers: Dictionary = {}
+var colors: Dictionary = {}
+
+var number_of_moves = 0
+
+var layer_data: Array = [16, 16, 16, 4]
+var test_input: Array = [1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0]
+
+var ai_array: Array
+
+var average_moves = 0
+var avg_move_array: Array = []
+
+var gen_target = 5000
+var gen = 0
+
+
+func _ready() -> void:
+	seed(0)
+	
+	game2048 = Game2048.new()
+	game2048.add_random_tile()
+	set_up_board()
+	update_board(game2048)
+	
+	
+	$Timer.start()
+	
+	set_up_ai(32)
+
+func _process(delta):
+	if gen < gen_target:
+		run_block(50,32)
+	else:
+		print(avg_move_array)
+		get_tree().quit()
+	
+
+func run_block(gen_num: int, ai_num: int):
+	average_moves = 0
+	for i in range(gen_num):
+		if i == gen_num - 1:
+			print("------------ GEN {0} -----------".format([gen + 1]))
+			average_moves = average_moves / (gen_num)
+			run_ai(true)
+		else:
+			run_ai(false)
+		reset_ai()
+		gen += 1
+
+func set_up_ai(num: int):
+	for i in range(num):
+		var ai = AI.new("AI {0}".format([i]), layer_data)
+		ai_array.append(ai)
+
+func run_ai(prt: bool):
+	
+	for ai in ai_array:
+		while !ai.done:
+			ai.update()
+			update_board(ai.game2048)
+	
+	var min_ai: AI = ai_array[0]
+	var max_ai: AI = ai_array[0]
+	
+	for ai in ai_array:
+		if ai.moves > max_ai.moves:
+			max_ai = ai
+		if ai.moves < min_ai.moves:
+			min_ai = ai
+	
+	for ai in ai_array:
+		if ai == max_ai:
+			continue
+		if ai == min_ai:
+			min_ai.model.load_weights(max_ai.model.weights.duplicate())
+			continue
+		ai.model.mutate("rand")
+	
+	if prt:
+		print("AVG MAX: ", average_moves)
+		avg_move_array.append(average_moves)
+	
+	print("[{0}]: {1}".format([max_ai.name, max_ai.moves]))
+	average_moves += max_ai.moves
+
+
+func _on_Timer_timeout():
+	pass
+#	if !ai_one.done:
+#		ai_one.update()
+#		update_board(ai_one.game2048)
+#	else:
+#		$Timer.stop()
+#
+#		print("\n[{0}]".format([ai_one.name]))
+#		print("MOVES: ", ai_one.moves)
+#		print("WON: ", !ai_one.lost)
+
+
+func reset_ai():
+	for ai in ai_array:
+		ai.reset_game()
+
 
 func _input(event):
 	if event is InputEventKey and event.pressed:
 		if event.scancode == KEY_W or event.scancode == KEY_UP:
 			print("UP")
-			shift_board(UP)
+			game2048.shift_board(UP)
+			update_board(game2048)
 		if event.scancode == KEY_D or event.scancode == KEY_RIGHT:
 			print("RIGHT")
-			shift_board(RIGHT)
+			game2048.shift_board(RIGHT)
+			update_board(game2048)
 		if event.scancode == KEY_S or event.scancode == KEY_DOWN:
 			print("DOWN")
-			shift_board(DOWN)
+			game2048.shift_board(DOWN)
+			update_board(game2048)
 		if event.scancode == KEY_A or event.scancode == KEY_LEFT:
 			print("LEFT")
-			shift_board(LEFT)
+			game2048.shift_board(LEFT)
+			update_board(game2048)
 
 
-func _ready() -> void:
-	set_up_board()
-	
-	add_random_tile()
+func update_board(data: Game2048):
+	for x in range(4):
+		for y in range(4):
+			var pos = Vector2(x,y)
+			set_tile(pos, data.get_value(pos))
 
 
 func set_up_board():
@@ -71,88 +179,6 @@ func set_up_board():
 	colors[Vector2(3,3)] = $CanvasLayer/UI/MarginContainer/ColorBord/Color16
 
 
-func shift_board(dir: int) -> void:
-	var m1 = false
-	match dir:
-		UP:
-			for y in range(1, 4):
-				for x in range(4):
-					m1 = shift(Vector2(x,y), UP)
-					var m2 = shift(Vector2(x,y) + DIR_MATRIX[UP], UP) if m1 == true and y > 1 else false
-					shift(Vector2(x,y) + DIR_MATRIX[UP] * 2, UP) if m2 == true and y > 2 else false
-		RIGHT:
-			for x in range(2,-1, -1):
-				for y in range(4):
-					m1 = shift(Vector2(x,y), RIGHT)
-					var m2 = shift(Vector2(x,y) + DIR_MATRIX[RIGHT], RIGHT) if m1 == true and x < 2 else false
-					shift(Vector2(x,y) + DIR_MATRIX[RIGHT] * 2, RIGHT) if m2 == true and x < 1 else false
-		DOWN:
-			for y in range(2,-1, -1):
-				for x in range(4):
-					m1 = shift(Vector2(x,y), DOWN)
-					var m2 = shift(Vector2(x,y) + DIR_MATRIX[DOWN], DOWN) if m1 == true and y < 2 else false
-					shift(Vector2(x,y) + DIR_MATRIX[DOWN] * 2, DOWN) if m2 == true and y < 1 else false
-		LEFT:
-			for x in range(1,4):
-				for y in range(4):
-					m1 = shift(Vector2(x,y), LEFT)
-					var m2 = shift(Vector2(x,y) + DIR_MATRIX[LEFT], LEFT) if m1 == true and x > 1 else false
-					shift(Vector2(x,y) + DIR_MATRIX[LEFT] * 2, LEFT) if m2 == true and x > 2 else false
-	
-	for x in range(4):
-		for y in range(4):
-			numbers[Vector2(x,y)].has_combined = false
-	
-	if m1:
-		add_random_tile()
-
-
-func shift(pos: Vector2, dir: int) -> bool:
-	var start_pos: Vector2 = pos
-	var dir_pos: Vector2 = start_pos + DIR_MATRIX[dir]
-	
-	if numbers[dir_pos].is_empty():
-		numbers[dir_pos].set_text(numbers[start_pos].get_text())
-		numbers[start_pos].set_text("")
-		
-		colors[start_pos].set_color(numbers[start_pos].get_colo())
-		colors[dir_pos].set_color(numbers[dir_pos].get_colo())
-	elif numbers[dir_pos].get_text() == numbers[start_pos].get_text() and !numbers[dir_pos].has_combined and !numbers[start_pos].has_combined:
-		numbers[dir_pos].set_text( ((numbers[start_pos].get_text() as int) + 
-				(numbers[Vector2(dir_pos)].get_text() as int)) as String )
-		numbers[start_pos].set_text("")
-		
-		colors[start_pos].set_color(numbers[start_pos].get_colo())
-		colors[dir_pos].set_color(numbers[dir_pos].get_colo())
-		
-		numbers[dir_pos].has_combined = true
-	else: 
-		return false
-	return true
-
-func add_random_tile():
-	var done: bool = false
-	var count: int = 0
-	
-	while !done:
-		var random_vec2 = Vector2(floor(rand_range(0, 4)), floor(rand_range(0, 4)))
-		if numbers[random_vec2].is_empty():
-			print(random_vec2)
-			done = true
-			
-			if randf() > 0.9:
-				numbers[random_vec2].set_text("4")
-				colors[random_vec2].set_color(numbers[random_vec2].get_colo())
-			else:
-				numbers[random_vec2].set_text("2")
-				colors[random_vec2].set_color(numbers[random_vec2].get_colo())
-		else:
-			count += 1
-			if count > 100:
-				print("No Room!")
-				done = true
-
-
 func set_tile(pos: Vector2, num: int):
-	numbers[pos].set_text(num as String)
+	numbers[pos].set_text(num as String if num != 0 else "")
 	colors[pos].set_color(numbers[pos].get_colo())

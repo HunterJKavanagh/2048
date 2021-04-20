@@ -8,9 +8,38 @@
 
 config_version=4
 
-_global_script_classes=[  ]
+_global_script_classes=[ {
+"base": "Node",
+"class": "AI",
+"language": "GDScript",
+"path": "res://AI.gd"
+}, {
+"base": "Node",
+"class": "Game2048",
+"language": "GDScript",
+"path": "res://game_2048.gd"
+}, {
+"base": "Reference",
+"class": "NeuralNetwork",
+"language": "GDScript",
+"path": "res://NeuralNetwork.gd"
+}, {
+"base": "Reference",
+"class": "Neuron",
+"language": "GDScript",
+"path": "res://Neuron.gd"
+}, {
+"base": "Node",
+"class": "Tile",
+"language": "GDScript",
+"path": "res://tile.gd"
+} ]
 _global_script_class_icons={
-
+"AI": "",
+"Game2048": "",
+"NeuralNetwork": "",
+"Neuron": "",
+"Tile": ""
 }
 
 [application]
