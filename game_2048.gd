@@ -10,6 +10,21 @@ const DIR_MATRIX: Dictionary = {
 	LEFT: Vector2(-1,0)
 }
 
+const SCORE_CHART: Dictionary = {
+	0: 0,
+	2: 1,
+	4: 2,
+	8: 3,
+	16: 4,
+	32: 5,
+	64: 6,
+	128: 7,
+	256: 8,
+	512: 9,
+	1024: 10,
+	2048: 11,
+}
+
 var tiles: Array = []
 var number_of_moves = 0
 
@@ -31,6 +46,24 @@ func get_value(pos: Vector2) -> int:
 	return tiles[pos.x][pos.y].value
 func set_value(pos: Vector2, value: int):
 	tiles[pos.x][pos.y].value = value
+
+
+func get_score(weighted: bool = false) -> float:
+	var score = 0
+	var largest_value = 0
+	
+	for x in range(4):
+		for y in range(4):
+			var value = tiles[x][y].value
+			score += value
+			if value > largest_value:
+				largest_value = value
+	
+	if weighted:
+		return (score/100) * SCORE_CHART[largest_value]
+	else:
+		return score
+
 
 func shift_board(dir: int) -> bool:
 	var moved = false

@@ -16,45 +16,103 @@ var colors: Dictionary = {}
 
 var number_of_moves = 0
 
-var layer_data: Array = [16, 16, 16, 4]
+var layer_data: Array = [192, 64, 64, 4]
 var test_input: Array = [1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0]
 
 var ai_array: Array
 
-var average_moves = 0
-var avg_move_array: Array = []
-
-var gen_target = 5000
+var gen_target = 50
+var gen_size = 16
 var gen = 0
+
+var start_time
+var end_time
+
+var fit_array: Array = []
 
 
 func _ready() -> void:
+	print("GameAI")
+	start_time = OS.get_time()
+	print(start_time)
+	
 	seed(0)
 	
 	game2048 = Game2048.new()
 	game2048.add_random_tile()
 	set_up_board()
 	update_board(game2048)
+	
+	
+	$Timer.start()
+	
+	set_up_ai(gen_size)
+
+func _process(delta):
+	reset_ai()
+	if gen < gen_target:
+		if (gen + 1) % 5 == 0:
+			print("------------ GEN {0} -----------".format([gen + 1]))
+			run_ai(true)
+		else:
+			run_ai(false)
+		gen += 1
+	else:
+		end_time = OS.get_time()
+		print("Hours: ", end_time.hour - start_time.hour, "   Minutes: ", end_time.minute - start_time.minute, "   Seconds: ", end_time.second - start_time.second)
+		
+		var strings: PoolStringArray = []
+		for avg in fit_array:
+			strings.append(avg)
+		
+		var file = File.new()
+		file.open("user://save_game.csv", File.WRITE)
+		file.store_csv_line(strings)
+		file.close()
+		
+		get_tree().quit()
+
+func set_up_ai(num: int):
+	for i in range(num):
+		var ai = AI.new("AI {0}".format([i]), layer_data)
+		ai_array.append(ai)
+
+func run_ai(prt: bool = false):
+	for ai in ai_array:
+		while !ai.done:
+			ai.update()
+	
+	ai_array.sort_custom(FitnessSorterAI, "sort")
+	
+	var model_array: Array = []
+	
+	for i in range(gen_size):
+		if i <= gen_size / 2:
+			model_array.append(ai_array[i].copy_model())
+		else:
+			ai_array[i].model = model_array.pop_front()
+			ai_array[i].model.mutate(32)
+	
+	var avg_fitness = 0
+	var best_fit = 0
+	var best
+	
+	for ai in ai_array:
+		avg_fitness += ai.fitness
+		if prt:
+			print("[{0}] Fitness: {1}".format([ai.name, ai.fitness]))
+		if ai.fitness > best_fit:
+			best = ai
+	update_board(best.game2048)
+	
+	avg_fitness /= gen_size
+	
+	fit_array.append(avg_fitness)
 
 
-func _input(event):
-	if event is InputEventKey and event.pressed:
-		if event.scancode == KEY_W or event.scancode == KEY_UP:
-			print("UP")
-			game2048.shift_board(UP)
-			update_board(game2048)
-		if event.scancode == KEY_D or event.scancode == KEY_RIGHT:
-			print("RIGHT")
-			game2048.shift_board(RIGHT)
-			update_board(game2048)
-		if event.scancode == KEY_S or event.scancode == KEY_DOWN:
-			print("DOWN")
-			game2048.shift_board(DOWN)
-			update_board(game2048)
-		if event.scancode == KEY_A or event.scancode == KEY_LEFT:
-			print("LEFT")
-			game2048.shift_board(LEFT)
-			update_board(game2048)
+func reset_ai():
+	for ai in ai_array:
+		ai.reset_game()
 
 
 func update_board(data: Game2048):
@@ -103,3 +161,10 @@ func set_up_board():
 func set_tile(pos: Vector2, num: int):
 	numbers[pos].set_text(num as String if num != 0 else "")
 	colors[pos].set_color(numbers[pos].get_colo())
+
+
+class FitnessSorterAI:
+	static func sort(a, b):
+		if a.fitness > b.fitness:
+			return true
+		return false
